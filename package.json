@@ -8,6 +8,9 @@
   "files": [
     "dist"
   ],
+  "bin": {
+    "newver": "dist/cli.js"
+  },
   "typings": "./dist/main.d.ts",
   "publishConfig": {
     "access": "public"
