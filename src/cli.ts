@@ -32,12 +32,12 @@ yargs(hideBin(process.argv))
   })
   .implies("tag", "commit")
   .implies("push", "commit")
-  // .option("files", {
-  //   alias: "f",
-  //   describe: "Files to update version in.",
-  //   type: "array",
-  //   default: ["package.json", "package-lock.json"],
-  // })
+  .option("files", {
+    alias: "f",
+    describe: "Files to update version in.",
+    type: "array",
+    default: ["package.json", "package-lock.json"],
+  })
   .command(
     "* <version>",
     "",

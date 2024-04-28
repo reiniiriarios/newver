@@ -1,13 +1,13 @@
-import fs from "fs";
-import path from "path";
 import { exec } from "child_process";
 import readline from "readline";
-import log from "./log.js";
+import * as fs from "fs";
+import * as path from "path";
+import * as yaml from "js-yaml";
+import toml from "@iarna/toml";
 import chalk from "chalk";
+import log from "./log.js";
 
 const PROJ_ROOT = path.resolve(".");
-const PKG_JSON_FILE = path.join(PROJ_ROOT, "package.json");
-const PKG_LOCK_FILE = path.join(PROJ_ROOT, "package-lock.json");
 
 export type NewVersionOptions = {
   commit: boolean;
@@ -16,6 +16,10 @@ export type NewVersionOptions = {
   prefix: string;
   files: string[];
 };
+
+type JsonMap = { [key: string]: AnyJson };
+type JsonArray = boolean[] | number[] | string[] | JsonMap[] | Date[];
+type AnyJson = boolean | number | string | JsonMap | Date | JsonArray | JsonArray[];
 
 function parseVersion(version: string): string {
   if (!version || !/^v?\d+\.\d+\.\d+(?:\.\d+)?(?:-[a-z])?$/i.test(version)) {
@@ -38,68 +42,112 @@ function normalizePath(file: string): string {
   return file;
 }
 
-async function loadJson(path: string): Promise<Record<string, unknown>> {
+async function getData(file: string): Promise<JsonMap> {
   return new Promise(function (resolve, _reject) {
-    fs.readFile(path, "utf-8", (err, data) => {
-      if (err) {
-        log.err(`[${err.code}] ${err.message}`);
+    try {
+      fs.readFile(normalizePath(file), "utf-8", (err, contents) => {
+        if (err) {
+          log.err(`[${err.code}] ${err.message}`);
+          process.exit();
+        }
+        if (file.endsWith(".json")) {
+          resolve(JSON.parse(contents));
+          return;
+        }
+        if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+          let data = yaml.load(contents);
+          if (data && typeof data === "object") {
+            resolve(data as JsonMap);
+            return;
+          }
+          log.err(`Error parsing ${chalk.redBright(file)}`);
+          process.exit();
+        }
+        if (file.endsWith(".toml")) {
+          let data = toml.parse(contents);
+          if (data && typeof data === "object") {
+            resolve(data);
+            return;
+          }
+          log.err(`Error parsing ${chalk.redBright(file)}`);
+          process.exit();
+        }
+        log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
         process.exit();
-      }
-      resolve(JSON.parse(data));
-    });
+      });
+    } catch (err: unknown) {
+      log.exception(err);
+      process.exit();
+    }
   });
 }
 
-async function updatePackageVersion(version: string): Promise<boolean> {
-  const pkgJson: Record<string, unknown> = await loadJson(normalizePath(PKG_JSON_FILE));
-  const pkgLock: Record<string, unknown> = await loadJson(normalizePath(PKG_LOCK_FILE));
-
-  if (!("version" in pkgJson)) {
-    log.err("Error parsing package.json");
-    process.exit();
-  }
-
-  if (
-    !pkgLock.packages ||
-    typeof pkgLock.packages !== "object" ||
-    !("" in pkgLock.packages) ||
-    !pkgLock.packages[""] ||
-    typeof pkgLock.packages[""] !== "object" ||
-    !("version" in pkgLock.packages[""])
-  ) {
-    log.err("Error parsing package-lock.json");
-    process.exit();
-  }
-
-  const versionUpdate = pkgJson.version !== version;
-
-  pkgJson.version = version;
-  pkgLock.version = version;
-  pkgLock.packages[""].version = version;
-
-  log.info("Updating package files...");
+function saveData(file: string, data: JsonMap): void {
   try {
-    fs.writeFileSync(PKG_JSON_FILE, `${JSON.stringify(pkgJson, null, 2)}\n`);
-    log.info("package.json updated");
-    fs.writeFileSync(PKG_LOCK_FILE, `${JSON.stringify(pkgLock, null, 2)}\n`);
-    log.info("package-lock.json updated");
-  } catch (err: unknown) {
-    if (err && typeof err === "string") {
-      log.err(err);
-    } else if (err && typeof err === "object" && "message" in err) {
-      if ("message" in err) {
-        const code = "code" in err ? err.code : "ERROR";
-        log.err(`[${code}] ${err.message}`);
-      } else {
-        log.err(JSON.stringify(err));
-      }
-    } else {
-      log.err("An unknown error occurred.");
+    let contents: string = "";
+    if (file.endsWith(".json")) {
+      contents = JSON.stringify(data, null, 2);
+    } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+      contents = yaml.dump(data);
+    } else if (file.endsWith(".toml")) {
+      contents = toml.stringify(data);
     }
+    if (!contents) {
+      log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
+      process.exit();
+    }
+    fs.writeFileSync(normalizePath(file), `${contents}\n`);
+    log.info(`${file} updated`);
+  } catch (err: unknown) {
+    log.exception(err);
     process.exit();
   }
+}
 
-  return versionUpdate;
+function setVersion(data: JsonMap, version: string): boolean {
+  // e.g. package.json, package-lock.json, snapcraft.yaml
+  if ("version" in data) {
+    data.version = version;
+    return true;
+  }
+  // e.g. manifest.json
+  if ("Version" in data) {
+    data.Version = version;
+    return true;
+  }
+  // e.g. Cargo.toml
+  if ("package" in data && typeof data.package === "object" && "version" in data.package) {
+    data.package.version = version;
+    return true;
+  }
+  // e.g. wails.json
+  if ("info" in data && typeof data.info === "object") {
+    if ("productVersion" in data.info) {
+      data.info.productVersion = version;
+      return true;
+    }
+    if ("version" in data.info) {
+      data.info.version = version;
+      return true;
+    }
+  }
+  // e.g.
+  return false;
+}
+
+function setPkgLockVersion(data: JsonMap, version: string): boolean {
+  if (
+    data.packages &&
+    typeof data.packages === "object" &&
+    "" in data.packages &&
+    data.packages[""] &&
+    typeof data.packages[""] === "object" &&
+    "version" in data.packages[""]
+  ) {
+    data.packages[""].version = version;
+    return true;
+  }
+  return false;
 }
 
 function gitExec(cmd: string): Promise<void> {
@@ -160,12 +208,27 @@ async function gitPushTag(version: string): Promise<void> {
 
 export default async function newver(version: string, opts: Partial<NewVersionOptions> = {}) {
   log.msg(`Updating version to ${chalk.magenta(version)}`);
+
+  // Args
   version = parseVersion(version);
-  await updatePackageVersion(version);
-  if (opts.commit || (typeof opts.commit === "undefined" && (await question("Create commit?")))) {
-    if (!opts.files) {
-      opts.files = ["package.json", "package-lock.json"];
+  if (!opts.files) {
+    opts.files = ["package.json", "package-lock.json"];
+  }
+
+  // Parse
+  for (const file of opts.files) {
+    const data = await getData(file);
+    if (!setVersion(data, version)) {
+      log.err(`Error setting version in ${chalk.redBright(file)}`);
     }
+    if (file.endsWith("package-lock.json") && !setPkgLockVersion(data, version)) {
+      log.err(`Error setting secondary version in ${chalk.redBright(file)}`);
+    }
+    saveData(file, data);
+  }
+
+  // Git
+  if (opts.commit || (typeof opts.commit === "undefined" && (await question("Create commit?")))) {
     await gitCommit(version, opts.files, opts.prefix);
     if (opts.tag || (typeof opts.commit === "undefined" && (await question("Create tag?")))) {
       await gitTag(version);
