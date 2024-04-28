@@ -1,0 +1,53 @@
+{
+  "name": "newver",
+  "displayName": "newver",
+  "description": "Silly little script to tag and push a new version.",
+  "version": "1.0.0",
+  "main": "dist/main.js",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "typings": "./dist/main.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "Emma Litwa-Vulcu",
+    "email": "80431903+reiniiriarios@users.noreply.github.com"
+  },
+  "homepage": "https://github.com/reiniiriarios/newver#readme",
+  "bugs": {
+    "url": "https://github.com/reiniiriarios/newver/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/reiniiriarios/newver.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc --build --declaration",
+    "build:clean": "node scripts/clean.js",
+    "lint": "eslint ./src/**/*"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "sharp": "^0.33.3",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^20.11.30",
+    "@types/shelljs": "^0.8.15",
+    "@types/yargs": "^17.0.32",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.2.5",
+    "shelljs": "^0.8.5",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.7.0"
+  }
+}

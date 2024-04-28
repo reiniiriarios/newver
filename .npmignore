@@ -1,0 +1,36 @@
+/src
+/test
+/scripts
+/examples
+
+.github
+.editorconfig
+.eslintignore
+.gitignore
+.pretterignore
+.prettierrc
+eslint.config.*
+tsconfig.json
+
+.vscode
+
+## Common to gitignore ##
+
+# Node
+npm-debug.log
+/node_modules
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup generated files
+*~
+*.swp
+*.bak
+*#
