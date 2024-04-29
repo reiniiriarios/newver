@@ -1,6 +1,6 @@
 # 🔥 newver
 
-A silly little script to help quickly update a version in package files, then push.
+A silly little script to help quickly update a version in package files, then commit, tag, and push.
 Useful when, like me, you use tagged releases and push versions manually and frequently.
 
 ## Supported data formats
@@ -28,8 +28,10 @@ specified manually.
 ```sh
 newver <version> [options]
 newver 1.2.3
-newver 1.2.3 --commit=true
-newver 1.2.3 --commit=true --tag=true --prefix="chore(release)"
+newver 1.2.3 -c
+newver 1.2.3 --commit
+newver 1.2.3 --commit=true --tag=false --push=true --prefix="chore(release)"
+newver 1.2.3 -cptx "chore(release)"
 newver 1.2.3 --files=path/to/file.ext --files=path/to/another/file.ext
 ```
 
