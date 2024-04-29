@@ -3,6 +3,8 @@
 import yargs, { ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
 import newver, { NewVersionOptions } from "./newver.js";
+import log from "./log.js";
+import chalk from "chalk";
 
 yargs(hideBin(process.argv))
   .scriptName("newver")
@@ -36,7 +38,6 @@ yargs(hideBin(process.argv))
     alias: "f",
     describe: "Files to update version in.",
     type: "array",
-    default: ["package.json", "package-lock.json"],
   })
   .command(
     "* <version>",
