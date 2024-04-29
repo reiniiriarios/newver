@@ -485,12 +485,13 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
           log.stdout(stdout);
         }
         if (stderr) {
-          log.stderr(stderr);
+          if (!err || !err.message.includes(stderr)) {
+            // [sic] git outputs some non-error information to stderr
+            log.stdout(stderr);
+          }
         }
-        if (err && (!stderr || !err.message.includes(stderr))) {
+        if (err) {
           log.err(`[${err.code}] ${err.message}`);
-        }
-        if (stderr || err) {
           process.exit(1);
         }
         resolve();
