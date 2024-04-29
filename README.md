@@ -3,26 +3,6 @@
 A silly little script to help quickly update a version in package files, then commit, tag, and push.
 Useful when, like me, you use tagged releases and push versions manually and frequently.
 
-## Supported data formats
-
-- `.json`
-- `.yaml` / `.yml`
-- `.toml`
-
-Other formats are find-and-replace.
-
-## Supported auto-magical files
-
-These will be looked for automatically in the project's root directory. Other files may be
-specified manually.
-
-- package.json
-- package-lock.json
-- Cargo.toml
-- snapcraft.yaml
-- wails.json
-- go.mod
-
 ## CLI Usage
 
 ```sh
@@ -82,3 +62,23 @@ newver(process.args.pop(), {
   files: ["package.json", "package-lock.json", "path/to/another/file.json"],
 });
 ```
+
+## Supported data formats
+
+- `.json`
+- `.yaml` / `.yml`
+- `.toml`
+
+Other formats are find-and-replace.
+
+## Supported auto-magical files
+
+These will be looked for automatically in the project's root directory. Other files may be
+specified manually.
+
+- package.json
+- package-lock.json
+- Cargo.toml
+- snapcraft.yaml
+- wails.json
+- go.mod
