@@ -32,6 +32,11 @@ yargs(hideBin(process.argv))
   })
   .implies("tag", "commit")
   .implies("push", "commit")
+  .option("ignore-regression", {
+    alias: "i",
+    describe: "Don't warn about version regression",
+    type: "boolean",
+  })
   .option("files", {
     alias: "f",
     describe: "Files to update version in.",

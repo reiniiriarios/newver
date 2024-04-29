@@ -423,7 +423,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       const newMajor = parseInt(version.split(".")[0]);
       const q = `This constitutes a backwards major version change, from ${chalk.magenta(`v${currentMajor}`)} to ${chalk.magenta(`v${newMajor}`)}. Proceed?`;
       if (
-        (newMajor < currentMajor && !(await question(q))) ||
+        (newMajor < currentMajor && !opts.ignoreRegression && !(await question(q))) ||
         !(await confirmVersionChange(currentVersion[1], version, file))
       ) {
         return null;
