@@ -224,7 +224,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
         contents = toml.stringify(data);
       }
       if (!contents) {
-        log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
+        log.err(`Unsupported filetype: ${chalk.redBright(file.name)}`);
         process.exit(1);
       }
       saveContents(file, contents);
@@ -247,7 +247,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       }
       fs.writeFileSync(file.path, contents);
       processedFiles.push(file);
-      log.info(`${chalk.green(file)} updated`);
+      log.info(`${chalk.green(file.name)} updated`);
     } catch (err: unknown) {
       log.exception(err);
       process.exit(1);
