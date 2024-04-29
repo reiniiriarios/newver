@@ -30,7 +30,7 @@ const defaultFiles = [
   "Cargo.toml",
   "snapcraft.yaml",
   "wails.json",
-  // go.mod
+  "go.mod",
   // ??
 ];
 
@@ -86,15 +86,27 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
 
     // Parse
     for (const file of files) {
-      const data = await getData(file);
-      if (!(await setVersion(data, file))) {
-        log.info(`No update to ${chalk.green(file.name)}`);
-      } else {
-        if (file.name.endsWith("package-lock.json") && !setPkgLockVersion(data)) {
-          log.err(`Error setting secondary version in ${chalk.redBright(file.name)}`);
-          process.exit(1);
+      if (file.name.endsWith("go.mod")) {
+        // Find and replace
+        const contents = await getContents(file);
+        const updatedContents = await setGoModVersion(contents, file);
+        if (!updatedContents) {
+          log.info(`No update to ${chalk.green(file.name)}`);
+        } else {
+          saveContents(file, updatedContents);
         }
-        saveData(file, data);
+      } else {
+        // Parse data
+        const data = await getData(file);
+        if (!(await setVersion(data, file))) {
+          log.info(`No update to ${chalk.green(file.name)}`);
+        } else {
+          if (file.name.endsWith("package-lock.json") && !setPkgLockVersion(data)) {
+            log.err(`Error setting secondary version in ${chalk.redBright(file.name)}`);
+            process.exit(1);
+          }
+          saveData(file, data);
+        }
       }
     }
     if (!processedFiles.length) {
@@ -134,9 +146,9 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
    * Get data from file.
    *
    * @param {FileData} file
-   * @returns {Promise<JsonMap>} File data as object
+   * @returns {Promise<string>} File contents
    */
-  async function getData(file: FileData): Promise<JsonMap> {
+  async function getContents(file: FileData): Promise<string> {
     return new Promise(function (resolve, _reject) {
       try {
         fs.readFile(file.path, "utf-8", (err, contents) => {
@@ -144,6 +156,25 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
             log.err(`[${err.code}] ${err.message}`);
             process.exit(1);
           }
+          resolve(contents);
+        });
+      } catch (err: unknown) {
+        log.exception(err);
+        process.exit(1);
+      }
+    });
+  }
+
+  /**
+   * Get data from file.
+   *
+   * @param {FileData} file
+   * @returns {Promise<JsonMap>} File data as object
+   */
+  async function getData(file: FileData): Promise<JsonMap> {
+    return new Promise(function (resolve, _reject) {
+      try {
+        getContents(file).then((contents) => {
           if (file.name.endsWith(".json")) {
             resolve(JSON.parse(contents));
             return;
@@ -154,7 +185,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
               resolve(data as JsonMap);
               return;
             }
-            log.err(`Error parsing ${chalk.redBright(file)}`);
+            log.err(`Error parsing ${chalk.redBright(file.name)}`);
             process.exit(1);
           }
           if (file.name.endsWith(".toml")) {
@@ -163,10 +194,10 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
               resolve(data);
               return;
             }
-            log.err(`Error parsing ${chalk.redBright(file)}`);
+            log.err(`Error parsing ${chalk.redBright(file.name)}`);
             process.exit(1);
           }
-          log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
+          log.err(`Unsupported filetype: ${chalk.redBright(file.name)}`);
           process.exit(1);
         });
       } catch (err: unknown) {
@@ -196,7 +227,25 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
         log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
         process.exit(1);
       }
-      fs.writeFileSync(file.path, `${contents}\n`);
+      saveContents(file, contents);
+    } catch (err: unknown) {
+      log.exception(err);
+      process.exit(1);
+    }
+  }
+
+  /**
+   * Save data to file.
+   *
+   * @param {FileData} file
+   * @param {string} contents
+   */
+  function saveContents(file: FileData, contents: string): void {
+    try {
+      if (!contents.endsWith("\n")) {
+        contents = `${contents}\n`;
+      }
+      fs.writeFileSync(file.path, contents);
       processedFiles.push(file);
       log.info(`${chalk.green(file)} updated`);
     } catch (err: unknown) {
@@ -349,6 +398,52 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       return true;
     }
     return false;
+  }
+
+  /**
+   * Update version in go.mod.
+   *
+   * @param {string} contents File contents
+   * @param {FileData} file
+   * @returns {Promise<string | null>} Updated contents, or null if nothing updated.
+   */
+  async function setGoModVersion(contents: string, file: FileData): Promise<string | null> {
+    if (!contents.match(/^module [^\s]+/m)) {
+      return null;
+    }
+    if (contents.match(/^module [^\s]+ v.[0-9a-z\-\.\+]+/m)) {
+      const currentVersion = contents.match(/^module [^\s]+ v([0-9a-z\-\.\+]+)/im);
+      if (!currentVersion) {
+        log.err("Unexpected error updating go.mod");
+        process.exit(1);
+      }
+
+      // For module versions v2 and later, the module name must end with the major version number, such as /v2.
+      const currentMajor = parseInt(currentVersion[1].split(".")[0]);
+      const newMajor = parseInt(version.split(".")[0]);
+      const q = `This constitutes a backwards major version change, from ${chalk.magenta(`v${currentMajor}`)} to ${chalk.magenta(`v${newMajor}`)}. Proceed?`;
+      if (
+        (newMajor < currentMajor && !(await question(q))) ||
+        !(await confirmVersionChange(currentVersion[1], version, file))
+      ) {
+        return null;
+      }
+      if (newMajor >= 2 && newMajor > currentMajor) {
+        if (newMajor > 2) {
+          // Update suffix, update version.
+          return contents.replace(/^(module [^\s]+)\/v[0-9] v[0-9a-z\-\.\+]+/im, `$1/v${newMajor} v${version}`);
+        } else {
+          // Add suffix, update version.
+          return contents.replace(/^(module [^\s]+) v[0-9a-z\-\.\+]+/im, `$1/v${newMajor} v${version}`);
+        }
+      } else {
+        // Update version.
+        return contents.replace(/^(module [^\s]+) v[0-9a-z\-\.\+]+/im, `$1 v${version}`);
+      }
+    } else {
+      // Add version.
+      return contents.replace(/^(module [^\s]+)/im, `$1 v${version}`);
+    }
   }
 
   /**

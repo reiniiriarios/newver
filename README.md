@@ -3,11 +3,13 @@
 A silly little script to help quickly update a version in package files, then push.
 Useful when, like me, you use tagged releases and push versions manually and frequently.
 
-## Supported formats
+## Supported data formats
 
 - `.json`
 - `.yaml` / `.yml`
 - `.toml`
+
+Other formats are find-and-replace.
 
 ## Supported auto-magical files
 
@@ -19,6 +21,7 @@ specified manually.
 - Cargo.toml
 - snapcraft.yaml
 - wails.json
+- go.mod
 
 ## CLI Usage
 
