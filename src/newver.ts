@@ -24,6 +24,16 @@ type JsonArray = boolean[] | number[] | string[] | JsonMap[] | Date[];
 type AnyJson = boolean | number | string | JsonMap | Date | JsonArray | JsonArray[];
 type FileData = { name: string; path: string };
 
+const defaultFiles = [
+  "package.json",
+  "package-lock.json",
+  "Cargo.toml",
+  "snapcraft.yaml",
+  "wails.json",
+  // go.mod
+  // ??
+];
+
 /**
  * Update version in files and, optionally, commit, tag, and push.
  *
@@ -42,7 +52,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     // Version
     // eslint-disable-next-line no-useless-escape
     if (!version || !/^v?\d+\.\d+\.\d+(?:\.\d+)?(?:-[a-z0-9\-\.\+])?$/i.test(version)) {
-      log.err("Invalid new version. Usage: newver <version> [options]");
+      log.err(`Invalid new version. Usage: ${chalk.yellow("newver <version> [options]")}`);
       log.err(`More information: ${chalk.underline("https://semver.org/")}`);
       process.exit();
     }
@@ -50,8 +60,20 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
 
     // Files
     if (!opts.files) {
-      files.push({ name: "package.json", path: normalizePath("package.json") });
-      files.push({ name: "package-lock.json", path: normalizePath("package-lock.json") });
+      for (const file of defaultFiles) {
+        const filepath = normalizePath(file);
+        if (fs.existsSync(filepath)) {
+          log.err(`File not found: ${chalk.redBright(file)}`);
+          files.push({ name: file, path: filepath });
+        }
+      }
+      if (!files.length) {
+        log.err("No applicable package files found.");
+        log.err(
+          `Specify with ${chalk.yellow("newver <version> --files=path/to/file.ext --files=path/to/another/file.ext")}`,
+        );
+        process.exit();
+      }
     } else {
       for (const file of opts.files) {
         const filepath = normalizePath(file);

@@ -3,8 +3,6 @@
 import yargs, { ArgumentsCamelCase } from "yargs";
 import { hideBin } from "yargs/helpers";
 import newver, { NewVersionOptions } from "./newver.js";
-import log from "./log.js";
-import chalk from "chalk";
 
 yargs(hideBin(process.argv))
   .scriptName("newver")
