@@ -15,6 +15,7 @@ export type NewVersionOptions = {
   push: boolean;
   prefix: string;
   files: string[];
+  quiet: boolean;
 };
 
 type JsonMap = { [key: string]: AnyJson };
@@ -207,6 +208,7 @@ async function gitPushTag(version: string): Promise<void> {
 }
 
 export default async function newver(version: string, opts: Partial<NewVersionOptions> = {}) {
+  log.quiet = !!opts.quiet;
   log.msg(`Updating version to ${chalk.magenta(version)}`);
 
   // Args

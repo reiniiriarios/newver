@@ -26,7 +26,7 @@ describe("package.json", () => {
   let data: Record<string, any> = {};
 
   it("updates", async () => {
-    await newver(v2, { files: ["test/data/package.json"], commit: false });
+    await newver(v2, { files: ["test/data/package.json"], commit: false, quiet: true });
   });
 
   it("sets the version correctly", async () => {
@@ -46,8 +46,8 @@ describe("package.json", () => {
 describe("package-lock.json", () => {
   let data: Record<string, any> = {};
 
-  it("updates correctly", async () => {
-    await newver(v2, { files: ["test/data/package-lock.json"], commit: false });
+  it("updates", async () => {
+    await newver(v2, { files: ["test/data/package-lock.json"], commit: false, quiet: true });
   });
 
   it("sets the version correctly", async () => {
@@ -69,8 +69,8 @@ describe("package-lock.json", () => {
 describe("Cargo.toml", () => {
   let data: Record<string, any> = {};
 
-  it("updates correctly", async () => {
-    await newver(v2, { files: ["test/data/Cargo.toml"], commit: false });
+  it("updates", async () => {
+    await newver(v2, { files: ["test/data/Cargo.toml"], commit: false, quiet: true });
   });
 
   it("sets the version correctly", async () => {
@@ -90,8 +90,8 @@ describe("Cargo.toml", () => {
 describe("snapcraft.yaml", () => {
   let data: Record<string, any> = {};
 
-  it("updates correctly", async () => {
-    await newver(v2, { files: ["test/data/snapcraft.yaml"], commit: false });
+  it("updates", async () => {
+    await newver(v2, { files: ["test/data/snapcraft.yaml"], commit: false, quiet: true });
   });
 
   it("sets the version correctly", async () => {
@@ -111,8 +111,8 @@ describe("snapcraft.yaml", () => {
 describe("wails.json", () => {
   let data: Record<string, any> = {};
 
-  it("updates correctly", async () => {
-    await newver(v2, { files: ["test/data/wails.json"], commit: false });
+  it("updates", async () => {
+    await newver(v2, { files: ["test/data/wails.json"], commit: false, quiet: true });
   });
 
   it("sets the version correctly", async () => {
