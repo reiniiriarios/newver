@@ -86,5 +86,6 @@ export default tseslint.config({
     "template-curly-spacing": ["error", "never"],
     "no-control-regex": "off",
     "no-extra-boolean-cast": "off",
+    "no-useless-escape": "off",
   },
 });

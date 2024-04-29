@@ -50,7 +50,6 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     log.msg(`Updating version to ${chalk.magenta(version)}`);
 
     // Version
-    // eslint-disable-next-line no-useless-escape
     if (!version || !/^v?\d+\.\d+\.\d+(?:\.\d+)?(?:-[a-z0-9\-\.\+])?$/i.test(version)) {
       log.err(`Invalid new version. Usage: ${chalk.yellow("newver <version> [options]")}`);
       log.err(`More information: ${chalk.underline("https://semver.org/")}`);
