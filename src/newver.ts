@@ -56,7 +56,7 @@ async function getData(file: string): Promise<JsonMap> {
           return;
         }
         if (file.endsWith(".yaml") || file.endsWith(".yml")) {
-          let data = yaml.load(contents);
+          const data = yaml.load(contents);
           if (data && typeof data === "object") {
             resolve(data as JsonMap);
             return;
@@ -65,7 +65,7 @@ async function getData(file: string): Promise<JsonMap> {
           process.exit();
         }
         if (file.endsWith(".toml")) {
-          let data = toml.parse(contents);
+          const data = toml.parse(contents);
           if (data && typeof data === "object") {
             resolve(data);
             return;
@@ -98,41 +98,109 @@ function saveData(file: string, data: JsonMap): void {
       process.exit();
     }
     fs.writeFileSync(normalizePath(file), `${contents}\n`);
-    log.info(`${file} updated`);
+    log.info(`${chalk.green(file)} updated`);
   } catch (err: unknown) {
     log.exception(err);
     process.exit();
   }
 }
 
-function setVersion(data: JsonMap, version: string): boolean {
+function cmpVersions(v1: string, v2: string) {
+  const partsA = v1.split(".");
+  const partsB = v2.split(".");
+  const nbParts = Math.max(partsA.length, partsB.length);
+
+  for (let i = 0; i < nbParts; ++i) {
+    if (partsA[i] === undefined) {
+      partsA[i] = "0";
+    }
+    if (partsB[i] === undefined) {
+      partsB[i] = "0";
+    }
+    const intA = parseInt(partsA[i], 10);
+    const intB = parseInt(partsB[i], 10);
+    if (!isNaN(intA) && !isNaN(intB)) {
+      if (intA > intB) {
+        return 1;
+      } else if (intA < intB) {
+        return -1;
+      }
+    }
+
+    const compare = partsA[i].localeCompare(partsB[i]);
+    if (compare !== 0) {
+      return compare;
+    }
+  }
+
+  return 0;
+}
+
+async function confirmVersionChange(v1: string, v2: string, file: string): Promise<boolean> {
+  if (v1 === v2) {
+    return false;
+  }
+  // change in suffixes
+  const [v1v, v1f] = v1.split("-");
+  const [v2v, v2f] = v2.split("-");
+  if (v1f !== v2f) {
+    return true;
+  }
+  // check if new version is older than current version
+  if (cmpVersions(v1v, v2v) > 0) {
+    if (
+      !(await question(
+        `Version ${chalk.magenta(v2)} is older than version ${chalk.magenta(v1)} in ${chalk.green(file)}. Proceed?`,
+      ))
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function setVersion(data: JsonMap, version: string, file: string): Promise<boolean> {
   // e.g. package.json, package-lock.json, snapcraft.yaml
   if ("version" in data) {
+    if (!(await confirmVersionChange(data.version as string, version, file))) {
+      return false;
+    }
     data.version = version;
     return true;
   }
   // e.g. manifest.json
   if ("Version" in data) {
+    if (!(await confirmVersionChange(data.Version as string, version, file))) {
+      return false;
+    }
     data.Version = version;
     return true;
   }
   // e.g. Cargo.toml
   if ("package" in data && typeof data.package === "object" && "version" in data.package) {
+    if (!(await confirmVersionChange(data.package.version as string, version, file))) {
+      return false;
+    }
     data.package.version = version;
     return true;
   }
   // e.g. wails.json
   if ("info" in data && typeof data.info === "object") {
     if ("productVersion" in data.info) {
+      if (!(await confirmVersionChange(data.info.productVersion as string, version, file))) {
+        return false;
+      }
       data.info.productVersion = version;
       return true;
     }
     if ("version" in data.info) {
+      if (!(await confirmVersionChange(data.info.version as string, version, file))) {
+        return false;
+      }
       data.info.version = version;
       return true;
     }
   }
-  // e.g.
   return false;
 }
 
@@ -220,13 +288,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
   // Parse
   for (const file of opts.files) {
     const data = await getData(file);
-    if (!setVersion(data, version)) {
-      log.err(`Error setting version in ${chalk.redBright(file)}`);
+    if (!(await setVersion(data, version, file))) {
+      log.info(`No update to ${chalk.green(file)}`);
+    } else {
+      if (file.endsWith("package-lock.json") && !setPkgLockVersion(data, version)) {
+        log.err(`Error setting secondary version in ${chalk.redBright(file)}`);
+      }
+      saveData(file, data);
     }
-    if (file.endsWith("package-lock.json") && !setPkgLockVersion(data, version)) {
-      log.err(`Error setting secondary version in ${chalk.redBright(file)}`);
-    }
-    saveData(file, data);
   }
 
   // Git
