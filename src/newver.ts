@@ -22,9 +22,11 @@ export type NewVersionOptions = {
 type JsonMap = { [key: string]: AnyJson };
 type JsonArray = boolean[] | number[] | string[] | JsonMap[] | Date[];
 type AnyJson = boolean | number | string | JsonMap | Date | JsonArray | JsonArray[];
+type FileData = { name: string; path: string };
 
 export default async function newver(version: string, opts: Partial<NewVersionOptions> = {}) {
-  const processedFiles: string[] = [];
+  const files: FileData[] = [];
+  const processedFiles: FileData[] = [];
 
   // Main
   (async function () {
@@ -42,16 +44,26 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
 
     // Files
     if (!opts.files) {
-      opts.files = ["package.json", "package-lock.json"];
+      files.push({ name: "package.json", path: normalizePath("package.json") });
+      files.push({ name: "package-lock.json", path: normalizePath("package-lock.json") });
+    } else {
+      for (const file of opts.files) {
+        const filepath = normalizePath(file);
+        files.push({ name: file, path: filepath });
+        if (!fs.existsSync(filepath)) {
+          log.err(`File not found: ${chalk.redBright(file)}`);
+          process.exit();
+        }
+      }
     }
 
     // Parse
-    for (const file of opts.files) {
+    for (const file of files) {
       const data = await getData(file);
       if (!(await setVersion(data, file))) {
         log.info(`No update to ${chalk.green(file)}`);
       } else {
-        if (file.endsWith("package-lock.json") && !setPkgLockVersion(data)) {
+        if (file.name.endsWith("package-lock.json") && !setPkgLockVersion(data)) {
           log.err(`Error setting secondary version in ${chalk.redBright(file)}`);
         }
         saveData(file, data);
@@ -81,26 +93,22 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     if (!file.match(/^(?:\/|[a-z]:[/\\])/i)) {
       file = path.join(PROJ_ROOT, file);
     }
-    if (!fs.existsSync(file)) {
-      log.err(`File not found: ${chalk.redBright(file)}`);
-      process.exit();
-    }
     return file;
   }
 
-  async function getData(file: string): Promise<JsonMap> {
+  async function getData(file: FileData): Promise<JsonMap> {
     return new Promise(function (resolve, _reject) {
       try {
-        fs.readFile(normalizePath(file), "utf-8", (err, contents) => {
+        fs.readFile(file.path, "utf-8", (err, contents) => {
           if (err) {
             log.err(`[${err.code}] ${err.message}`);
             process.exit();
           }
-          if (file.endsWith(".json")) {
+          if (file.name.endsWith(".json")) {
             resolve(JSON.parse(contents));
             return;
           }
-          if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+          if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
             const data = yaml.load(contents);
             if (data && typeof data === "object") {
               resolve(data as JsonMap);
@@ -109,7 +117,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
             log.err(`Error parsing ${chalk.redBright(file)}`);
             process.exit();
           }
-          if (file.endsWith(".toml")) {
+          if (file.name.endsWith(".toml")) {
             const data = toml.parse(contents);
             if (data && typeof data === "object") {
               resolve(data);
@@ -128,21 +136,21 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     });
   }
 
-  function saveData(file: string, data: JsonMap): void {
+  function saveData(file: FileData, data: JsonMap): void {
     try {
       let contents: string = "";
-      if (file.endsWith(".json")) {
+      if (file.name.endsWith(".json")) {
         contents = JSON.stringify(data, null, 2);
-      } else if (file.endsWith(".yaml") || file.endsWith(".yml")) {
+      } else if (file.name.endsWith(".yaml") || file.name.endsWith(".yml")) {
         contents = yaml.dump(data);
-      } else if (file.endsWith(".toml")) {
+      } else if (file.name.endsWith(".toml")) {
         contents = toml.stringify(data);
       }
       if (!contents) {
         log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
         process.exit();
       }
-      fs.writeFileSync(normalizePath(file), `${contents}\n`);
+      fs.writeFileSync(file.path, `${contents}\n`);
       processedFiles.push(file);
       log.info(`${chalk.green(file)} updated`);
     } catch (err: unknown) {
@@ -151,7 +159,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     }
   }
 
-  function cmpVersions(v1: string, v2: string) {
+  function cmpVersions(v1: string, v2: string): number {
     const partsA = v1.split(".");
     const partsB = v2.split(".");
     const nbParts = Math.max(partsA.length, partsB.length);
@@ -182,7 +190,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return 0;
   }
 
-  async function confirmVersionChange(v1: string, v2: string, file: string): Promise<boolean> {
+  async function confirmVersionChange(v1: string, v2: string, file: FileData): Promise<boolean> {
     if (v1 === v2) {
       return false;
     }
@@ -196,7 +204,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     if (!opts.ignoreRegression && cmpVersions(v1v, v2v) > 0) {
       if (
         !(await question(
-          `Version ${chalk.magenta(v2)} is older than version ${chalk.magenta(v1)} in ${chalk.green(file)}. Proceed?`,
+          `Version ${chalk.magenta(v2)} is older than version ${chalk.magenta(v1)} in ${chalk.green(file.name)}. Proceed?`,
         ))
       ) {
         return false;
@@ -205,7 +213,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return true;
   }
 
-  async function setVersion(data: JsonMap, file: string): Promise<boolean> {
+  async function setVersion(data: JsonMap, file: FileData): Promise<boolean> {
     // e.g. package.json, package-lock.json, snapcraft.yaml
     if ("version" in data) {
       if (!(await confirmVersionChange(data.version as string, version, file))) {
@@ -303,8 +311,8 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     });
   }
 
-  async function gitCommit() {
-    await gitExec(`add ${processedFiles.join(" ")}`);
+  async function gitCommit(): Promise<void> {
+    await gitExec(`add ${processedFiles.map((f) => f.name).join(" ")}`);
     const prefix = opts.prefix ? `${opts.prefix}: ` : "";
     await gitExec(`commit -m "${prefix}update version to ${version}"`);
   }
