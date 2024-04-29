@@ -3,17 +3,13 @@
 A silly little script to help quickly update a version in package files, then commit, tag, and push.
 Useful when, like me, you use tagged releases and push versions manually and frequently.
 
-## CLI Usage
+## Getting Started
 
-```sh
-newver <version> [options]
-newver 1.2.3
-newver 1.2.3 -c
-newver 1.2.3 --commit
-newver 1.2.3 --commit=true --tag=false --push=true --prefix="chore(release)"
-newver 1.2.3 -cptx "chore(release)"
-newver 1.2.3 --files=path/to/file.ext --files=path/to/another/file.ext
 ```
+npm i --save-dev @reiniiriarios/newver
+```
+
+package.json:
 
 ```json
 {
@@ -25,6 +21,19 @@ newver 1.2.3 --files=path/to/file.ext --files=path/to/another/file.ext
 
 ```sh
 npm run bump 1.2.3
+```
+
+## CLI Usage
+
+```sh
+newver <version> [options]
+newver 1.2.3
+newver 1.2.3 -c
+newver 1.2.3 --commit
+newver --commit 1.2.3
+newver 1.2.3 --commit=true --tag=false --push=true --prefix="chore(release)"
+newver -cptx "chore(release)" 1.2.3
+newver 1.2.3 --files=path/to/file.ext --files=path/to/another/file.ext
 ```
 
 For option details:
@@ -53,7 +62,7 @@ Updating version to 1.0.0
 
 ```ts
 #!/usr/bin/env node
-import newver from "newver";
+import newver from "@reiniiriarios/newver";
 
 newver(process.args.pop(), {
   quiet: true,
