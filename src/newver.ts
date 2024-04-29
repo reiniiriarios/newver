@@ -54,7 +54,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     if (!version || !/^v?\d+\.\d+\.\d+(?:\.\d+)?(?:-[a-z0-9\-\.\+])?$/i.test(version)) {
       log.err(`Invalid new version. Usage: ${chalk.yellow("newver <version> [options]")}`);
       log.err(`More information: ${chalk.underline("https://semver.org/")}`);
-      process.exit();
+      return;
     }
     version = version.replace(/^v/i, "");
 
@@ -63,7 +63,6 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       for (const file of defaultFiles) {
         const filepath = normalizePath(file);
         if (fs.existsSync(filepath)) {
-          log.err(`File not found: ${chalk.redBright(file)}`);
           files.push({ name: file, path: filepath });
         }
       }
@@ -72,16 +71,16 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
         log.err(
           `Specify with ${chalk.yellow("newver <version> --files=path/to/file.ext --files=path/to/another/file.ext")}`,
         );
-        process.exit();
+        process.exit(1);
       }
     } else {
       for (const file of opts.files) {
         const filepath = normalizePath(file);
-        files.push({ name: file, path: filepath });
         if (!fs.existsSync(filepath)) {
           log.err(`File not found: ${chalk.redBright(file)}`);
-          process.exit();
+          process.exit(1);
         }
+        files.push({ name: file, path: filepath });
       }
     }
 
@@ -89,10 +88,11 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     for (const file of files) {
       const data = await getData(file);
       if (!(await setVersion(data, file))) {
-        log.info(`No update to ${chalk.green(file)}`);
+        log.info(`No update to ${chalk.green(file.name)}`);
       } else {
         if (file.name.endsWith("package-lock.json") && !setPkgLockVersion(data)) {
-          log.err(`Error setting secondary version in ${chalk.redBright(file)}`);
+          log.err(`Error setting secondary version in ${chalk.redBright(file.name)}`);
+          process.exit(1);
         }
         saveData(file, data);
       }
@@ -142,7 +142,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
         fs.readFile(file.path, "utf-8", (err, contents) => {
           if (err) {
             log.err(`[${err.code}] ${err.message}`);
-            process.exit();
+            process.exit(1);
           }
           if (file.name.endsWith(".json")) {
             resolve(JSON.parse(contents));
@@ -155,7 +155,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
               return;
             }
             log.err(`Error parsing ${chalk.redBright(file)}`);
-            process.exit();
+            process.exit(1);
           }
           if (file.name.endsWith(".toml")) {
             const data = toml.parse(contents);
@@ -164,14 +164,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
               return;
             }
             log.err(`Error parsing ${chalk.redBright(file)}`);
-            process.exit();
+            process.exit(1);
           }
           log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
-          process.exit();
+          process.exit(1);
         });
       } catch (err: unknown) {
         log.exception(err);
-        process.exit();
+        process.exit(1);
       }
     });
   }
@@ -194,14 +194,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       }
       if (!contents) {
         log.err(`Unsupported filetype: ${chalk.redBright(file)}`);
-        process.exit();
+        process.exit(1);
       }
       fs.writeFileSync(file.path, `${contents}\n`);
       processedFiles.push(file);
       log.info(`${chalk.green(file)} updated`);
     } catch (err: unknown) {
       log.exception(err);
-      process.exit();
+      process.exit(1);
     }
   }
 
@@ -396,7 +396,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
           log.err(`[${err.code}] ${err.message}`);
         }
         if (stderr || err) {
-          process.exit();
+          process.exit(1);
         }
         resolve();
       });
