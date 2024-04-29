@@ -1,0 +1,17 @@
+name: example
+base: core22
+version: "1.0.0"
+summary: example
+description: example
+
+grade: devel
+confinement: devmode
+
+parts:
+  example:
+    plugin: dump
+    source: https://example.com/file.tar.gz
+
+apps:
+  example:
+    command: example

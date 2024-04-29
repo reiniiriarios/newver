@@ -1,0 +1,14 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "example",
+  "bundle": "me.reinii.example",
+  "author": {
+    "name": "Emma Litwa-Vulcu",
+    "email": "80431903+reiniiriarios@users.noreply.github.com"
+  },
+  "info": {
+    "companyName": "Emma Litwa-Vulcu",
+    "productName": "example",
+    "productVersion": "1.0.0"
+  }
+}

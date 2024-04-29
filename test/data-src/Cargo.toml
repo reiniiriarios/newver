@@ -1,0 +1,10 @@
+[package]
+name = "example"
+version = "1.0.0"
+authors = ["Emma Litwa-Vulcu <80431903+reiniiriarios@users.noreply.github.com>"]
+repository = "https://github.com/reiniiriarios/example"
+description = "example"
+license = "GPL-3.0+"
+
+[dependencies]
+log = "0.4.21"

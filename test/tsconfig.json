@@ -1,0 +1,11 @@
+{
+  "moduleResolution": "Bundler",
+  "compilerOptions": {
+    "target": "ES2022",
+    "downlevelIteration": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "."
+  },
+  "exclude": ["node_modules/*", "build/*", "dist/*", "electron/*", "frontend/*"]
+}
