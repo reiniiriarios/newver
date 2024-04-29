@@ -34,7 +34,8 @@
     "build": "tsc --build --declaration",
     "build:clean": "node scripts/clean.js",
     "lint": "eslint ./src/**/*",
-    "test": "mocha"
+    "test": "mocha",
+    "bump": "newver -ctx 'chore(release)'"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
