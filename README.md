@@ -1,5 +1,10 @@
 # 🔥 newver
 
+[![latest version](https://img.shields.io/npm/v/@reiniiriarios/newver?label=latest)](https://www.npmjs.com/package/@reiniiriarios/newver)
+[![downloads](https://img.shields.io/npm/dt/@reiniiriarios/newver)](https://www.npmjs.com/package/@reiniiriarios/newver)
+![types: Typescript](https://img.shields.io/badge/types-Typescript-blue)
+![build](https://img.shields.io/github/actions/workflow/status/reiniiriarios/newver/publish.yaml)
+
 A silly little script to help quickly update a version in package files, then commit, tag, and push.
 Useful when, like me, you use tagged releases and push versions manually and frequently.
 
