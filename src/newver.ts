@@ -24,6 +24,12 @@ type JsonArray = boolean[] | number[] | string[] | JsonMap[] | Date[];
 type AnyJson = boolean | number | string | JsonMap | Date | JsonArray | JsonArray[];
 type FileData = { name: string; path: string };
 
+/**
+ * Update version in files and, optionally, commit, tag, and push.
+ *
+ * @param {string} version New version
+ * @param {Partial<NewVersionOptions>} opts Options, see `newver --help`
+ */
 export default async function newver(version: string, opts: Partial<NewVersionOptions> = {}) {
   const files: FileData[] = [];
   const processedFiles: FileData[] = [];
@@ -88,6 +94,12 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     }
   })();
 
+  /**
+   * Normalize a file path to an absolute path.
+   *
+   * @param {string} file
+   * @returns {string} normalized path
+   */
   function normalizePath(file: string): string {
     // Make absolute if relative.
     if (!file.match(/^(?:\/|[a-z]:[/\\])/i)) {
@@ -96,6 +108,12 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return file;
   }
 
+  /**
+   * Get data from file.
+   *
+   * @param {FileData} file
+   * @returns {Promise<JsonMap>} File data as object
+   */
   async function getData(file: FileData): Promise<JsonMap> {
     return new Promise(function (resolve, _reject) {
       try {
@@ -136,6 +154,12 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     });
   }
 
+  /**
+   * Save data to file.
+   *
+   * @param {FileData} file
+   * @param {JsonMap} data
+   */
   function saveData(file: FileData, data: JsonMap): void {
     try {
       let contents: string = "";
@@ -159,6 +183,13 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     }
   }
 
+  /**
+   * Compare two versions.
+   *
+   * @param {string} v1 Current version
+   * @param {string} v2 New version
+   * @returns {number} 0: equal, > 0: v1 is the newer version; < 0: v2 is the newer version
+   */
   function cmpVersions(v1: string, v2: string): number {
     const partsA = v1.split(".");
     const partsB = v2.split(".");
@@ -190,6 +221,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return 0;
   }
 
+  /**
+   * Confirm version change for a specific file.
+   *
+   * @param {string} v1 Current version
+   * @param {string} v2 New version
+   * @param {FileData} file
+   * @returns {Promise<boolean>} Version for this file should be updated
+   */
   async function confirmVersionChange(v1: string, v2: string, file: FileData): Promise<boolean> {
     if (v1 === v2) {
       return false;
@@ -213,6 +252,15 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return true;
   }
 
+  /**
+   * Set version to data in specified file.
+   *
+   * Automatically looks for version based on predefined probable/common locations.
+   *
+   * @param {JsonMap} data
+   * @param {FileData} file
+   * @returns {boolean} Version was updated
+   */
   async function setVersion(data: JsonMap, file: FileData): Promise<boolean> {
     // e.g. package.json, package-lock.json, snapcraft.yaml
     if ("version" in data) {
@@ -258,6 +306,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return false;
   }
 
+  /**
+   * Set secondary version in package-lock.json data.
+   *
+   * data.packages[""].version = version
+   *
+   * @param {JsonMap} data
+   * @returns {boolean} Version was updated
+   */
   function setPkgLockVersion(data: JsonMap): boolean {
     if (
       data.packages &&
@@ -273,6 +329,14 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     return false;
   }
 
+  /**
+   * Ask the user a y/n question.
+   *
+   * Defaults to yes if nothing entered.
+   *
+   * @param {string} q Question
+   * @returns {Promise<boolean>} Answer (y/n)
+   */
   async function question(q: string): Promise<boolean> {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -289,6 +353,12 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     });
   }
 
+  /**
+   * Run a git command ang log output to user.
+   *
+   * @param {string} cmd Git command
+   * @returns {Promise<void>}
+   */
   function gitExec(cmd: string): Promise<void> {
     cmd = `git ${cmd}`;
     log.cmd(cmd);
@@ -311,20 +381,40 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
     });
   }
 
+  /**
+   * Commit files that were changed.
+   *
+   * @returns {Promise<void>}
+   */
   async function gitCommit(): Promise<void> {
     await gitExec(`add ${processedFiles.map((f) => f.name).join(" ")}`);
     const prefix = opts.prefix ? `${opts.prefix}: ` : "";
     await gitExec(`commit -m "${prefix}update version to ${version}"`);
   }
 
+  /**
+   * git tag {tag}
+   *
+   * @returns {Promise<void>}
+   */
   async function gitTag(): Promise<void> {
     await gitExec(`tag v${version}`);
   }
 
+  /**
+   * git push
+   *
+   * @returns {Promise<void>}
+   */
   async function gitPush(): Promise<void> {
     await gitExec("push");
   }
 
+  /**
+   * git push origin {tag}
+   *
+   * @returns {Promise<void>}
+   */
   async function gitPushTag(): Promise<void> {
     await gitExec(`push origin v${version}`);
   }
