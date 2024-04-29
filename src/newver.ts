@@ -45,7 +45,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
   const processedFiles: FileData[] = [];
 
   // Main
-  (async function () {
+  await (async function () {
     log.quiet = !!opts.quiet;
     log.msg(`Updating version to ${chalk.magenta(version)}`);
 
