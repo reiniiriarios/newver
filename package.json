@@ -1,6 +1,5 @@
 {
-  "name": "newver",
-  "displayName": "newver",
+  "name": "@reiniiriarios/newver",
   "description": "Silly little script to tag and push a new version.",
   "version": "1.0.0",
   "main": "dist/main.js",
