@@ -50,11 +50,25 @@ newver --help
 ### Example output
 
 ```
-$ newver --commit=false 1.2.3
-Updating version to 1.2.3
+$ newver -ct --prefix=chore(release) 1.0.3
+Updating version to 1.0.3
 ▸ package.json updated
 ▸ package-lock.json updated
+▸ git add package.json package-lock.json
+▸ git commit -m "chore(release): update version to 1.0.3"
+[main 999def8] chore(release): update version to 1.0.3
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+▸ git tag v1.0.3
+▸ Push to origin? (Y/n) y
+▸ git push
+To https://github.com/reiniiriarios/newver.git
+   2dba8e8..999def8  main -> main
+▸ git push origin v1.0.3
+To https://github.com/reiniiriarios/newver.git
+ * [new tag]         v1.0.3 -> v1.0.3
+```
 
+```
 $ newver --commit=false 1.0.0
 Updating version to 1.0.0
 ▸ Version 1.0.0 is older than version 1.2.3 in package.json. Proceed? (Y/n) y
