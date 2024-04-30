@@ -89,6 +89,27 @@ describe("Cargo.toml", () => {
   });
 });
 
+describe("tauri.config.json", () => {
+  let data: Record<string, any> = {};
+
+  it("updates", async () => {
+    await newver(v2, { files: ["test/data/tauri.config.json"], commit: false, quiet: true });
+  });
+
+  it("sets the version correctly", async () => {
+    const contents = fs.readFileSync(path.join(DATA_DIR, "tauri.config.json"), "utf-8");
+    data = JSON.parse(contents);
+    expect((data.package as Record<string, unknown>).version).to.equal(v2);
+  });
+
+  it("doesn't mess up the rest of the file", async () => {
+    data.package.version = v1;
+    const contentsSrc = fs.readFileSync(path.join(DATA_SRC_DIR, "tauri.config.json"), "utf-8");
+    const dataSrc = JSON.parse(contentsSrc);
+    expect(data).to.deep.equal(dataSrc);
+  });
+});
+
 describe("go.mod", () => {
   let contents0: string = "";
 

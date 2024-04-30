@@ -94,5 +94,6 @@ specified manually.
 - package-lock.json
 - Cargo.toml
 - snapcraft.yaml
+- tauri.config.json
 - wails.json
 - go.mod

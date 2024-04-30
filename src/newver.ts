@@ -29,6 +29,7 @@ const defaultFiles = [
   "package-lock.json",
   "Cargo.toml",
   "snapcraft.yaml",
+  "tauri.config.json",
   "wails.json",
   "go.mod",
   // ??
@@ -348,7 +349,7 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
       data.Version = version;
       return true;
     }
-    // e.g. Cargo.toml
+    // e.g. Cargo.toml, tauri.config.json
     if ("package" in data && typeof data.package === "object" && "version" in data.package) {
       if (!(await confirmVersionChange(data.package.version as string, version, file))) {
         return false;
