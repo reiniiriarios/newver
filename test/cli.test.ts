@@ -24,7 +24,7 @@ describe("cli", () => {
   let data: Record<string, any> = {};
 
   it("updates", async () => {
-    execSync(`npx newver ${v2} --commit false --files=test/data/cli.json`);
+    execSync(`newver ${v2} --commit false --files=test/data/cli.json`);
   }).timeout(2500);
 
   it("sets the version correctly", async () => {
