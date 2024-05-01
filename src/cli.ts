@@ -55,6 +55,13 @@ yargs(hideBin(process.argv))
     },
     (args: ArgumentsCamelCase<NewVersionOptions & { version: string }>) => {
       const { version, _: _, $0: _$0, ...opts } = args;
+      // trim possible quotes
+      if (opts.prefix) {
+        opts.prefix = opts.prefix.replace(/^['"]/, "").replace(/['"]$/, "");
+      }
+      if (opts.files) {
+        opts.files = opts.files.map((f) => f.replace(/^['"]/, "").replace(/['"]$/, ""));
+      }
       newver(version, opts);
     },
   )

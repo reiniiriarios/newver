@@ -35,7 +35,7 @@
     "build:clean": "node scripts/clean.js",
     "lint": "eslint ./src/**/*",
     "test": "mocha",
-    "bump": "newver -ct --prefix=chore(release)"
+    "bump": "newver -ct --prefix='chore(release)'"
   },
   "dependencies": {
     "@iarna/toml": "^2.2.5",
