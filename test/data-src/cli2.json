@@ -1,0 +1,10 @@
+{
+  "name": "example",
+  "displayName": "example",
+  "description": "example",
+  "example": {
+    "version": "1.0.0"
+  },
+  "main": "dist/main.js",
+  "type": "module"
+}

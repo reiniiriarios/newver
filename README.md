@@ -39,6 +39,7 @@ newver --commit 1.2.3
 newver 1.2.3 --commit=true --tag=false --push=true --prefix="chore(release)"
 newver -cptx "chore(release)" 1.2.3
 newver 1.2.3 --files=path/to/file.ext --files=path/to/another/file.ext
+newver --files=path/to/file.json --data-paths=package.info.version 1.2.3
 ```
 
 For option details:
@@ -84,9 +85,9 @@ Updating version to 1.0.0
 import newver from "@reiniiriarios/newver";
 
 newver(process.args.pop(), {
-  quiet: true,
   commit: true,
   prefix: "chore(release)",
+  ignoreRegression: false,
   files: ["package.json", "package-lock.json", "path/to/another/file.json"],
 });
 ```

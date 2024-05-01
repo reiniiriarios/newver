@@ -39,7 +39,12 @@ yargs(hideBin(process.argv))
   })
   .option("files", {
     alias: "f",
-    describe: "Files to update version in.",
+    describe: "Files to update version in",
+    type: "array",
+  })
+  .option("data-paths", {
+    alias: "d",
+    describe: "Paths of objects in files to set version",
     type: "array",
   })
   .command(
@@ -61,6 +66,9 @@ yargs(hideBin(process.argv))
       }
       if (opts.files) {
         opts.files = opts.files.map((f) => f.replace(/^['"]/, "").replace(/['"]$/, ""));
+      }
+      if (opts.dataPaths) {
+        opts.dataPaths = opts.dataPaths.map((d) => d.replace(/^['"]/, "").replace(/['"]$/, ""));
       }
       newver(version, opts);
     },

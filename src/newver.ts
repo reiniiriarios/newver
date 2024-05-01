@@ -15,6 +15,7 @@ export type NewVersionOptions = {
   push: boolean;
   prefix: string;
   files: string[];
+  dataPaths: string[];
   quiet: boolean;
   ignoreRegression: boolean;
 };
@@ -22,7 +23,12 @@ export type NewVersionOptions = {
 type JsonMap = { [key: string]: AnyJson };
 type JsonArray = boolean[] | number[] | string[] | JsonMap[] | Date[];
 type AnyJson = boolean | number | string | JsonMap | Date | JsonArray | JsonArray[];
-type FileData = { name: string; path: string };
+type FileData = { name: string; path: string; prop?: string };
+
+// type guard for traversing object
+function isJsonMap(o: unknown): o is JsonMap {
+  return !!o && typeof o === "object";
+}
 
 const defaultFiles = [
   "package.json",
@@ -74,13 +80,19 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
         process.exit(1);
       }
     } else {
-      for (const file of opts.files) {
-        const filepath = normalizePath(file);
-        if (!fs.existsSync(filepath)) {
+      for (const [i, file] of opts.files.entries()) {
+        const filedata: FileData = {
+          name: file,
+          path: normalizePath(file),
+        };
+        if (opts.dataPaths?.[i]) {
+          filedata.prop = opts.dataPaths[i];
+        }
+        if (!fs.existsSync(filedata.path)) {
           log.err(`File not found: ${chalk.redBright(file)}`);
           process.exit(1);
         }
-        files.push({ name: file, path: filepath });
+        files.push(filedata);
       }
     }
 
@@ -324,6 +336,101 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
   }
 
   /**
+   * Traverse object by string and return version, if present.
+   *
+   * @param {JsonMap} obj
+   * @param {FileData} file
+   * @returns {string | null} Version or null if not found
+   */
+  function getVersionPropByString(obj: JsonMap, file: FileData): string | null {
+    if (!file.prop) {
+      return null;
+    }
+    // convert indexes to props, strip leading dot
+    const props = file.prop
+      .replace(/\[(\w+)\]/g, ".$1")
+      .replace(/^\./, "")
+      .split(".");
+
+    // traverse
+    let current: unknown = obj;
+    try {
+      for (let i = 0; i < props.length; ++i) {
+        if (isJsonMap(current) && props[i] in current) {
+          current = current[props[i]];
+        } else if (Array.isArray(current) && typeof current[parseInt(props[i])] !== "undefined") {
+          current = current[parseInt(props[i])];
+        } else {
+          return null;
+        }
+      }
+    } catch (e: unknown) {
+      log.err(`Error processing path ${chalk.redBright(file.prop)} in ${chalk.redBright(file.name)}.`);
+      log.exception(e);
+      process.exit(1);
+    }
+
+    // check result
+    if (typeof current !== "string") {
+      return null;
+    }
+
+    return current;
+  }
+
+  /**
+   * Recursively set version to object by prop string.
+   *
+   * @param {AnyJson} obj
+   * @param {string | string[]} props
+   */
+  function setVersionPropByString(obj: AnyJson, props: string | string[]): void {
+    if (typeof props === "string") {
+      // convert indexes to props, strip leading dot
+      props = props
+        .replace(/\[(\w+)\]/g, ".$1")
+        .replace(/^\./, "")
+        .split(".");
+    }
+
+    // get current prop
+    const prop = props.shift();
+    if (!prop) {
+      log.err(`Unexpected error parsing ${chalk.redBright(props.join("."))}`);
+      process.exit(1);
+    }
+
+    // if no more props,
+    if (!props.length) {
+      // set version and return
+      if (isJsonMap(obj)) {
+        obj[prop] = version;
+      } else if (Array.isArray(obj)) {
+        obj[parseInt(prop)] = version;
+      }
+      return;
+    }
+
+    // traverse and add missing paths
+    if (isJsonMap(obj)) {
+      if (typeof obj[prop] === "undefined") {
+        obj[prop] = isNaN(Number(props[0])) ? {} : [];
+      }
+      setVersionPropByString(obj[prop], props);
+    } else if (Array.isArray(obj)) {
+      const index = parseInt(prop);
+      if (typeof obj[index] === "undefined") {
+        obj[index] = isNaN(Number(props[0])) ? {} : [];
+      }
+      setVersionPropByString(obj[index], props);
+    } else {
+      // Should never be called.
+      log.err(`Error setting version, path invalid for given data.`);
+      process.exit(1);
+    }
+  }
+
+  /**
    * Set version to data in specified file.
    *
    * Automatically looks for version based on predefined probable/common locations.
@@ -333,6 +440,15 @@ export default async function newver(version: string, opts: Partial<NewVersionOp
    * @returns {boolean} Version was updated
    */
   async function setVersion(data: JsonMap, file: FileData): Promise<boolean> {
+    // set user-specified property
+    if (file.prop) {
+      const currentVersion = getVersionPropByString(data, file);
+      if (currentVersion && !(await confirmVersionChange(currentVersion, version, file))) {
+        return false;
+      }
+      setVersionPropByString(data, file.prop);
+      return true;
+    }
     // e.g. package.json, package-lock.json, snapcraft.yaml
     if ("version" in data) {
       if (!(await confirmVersionChange(data.version as string, version, file))) {
